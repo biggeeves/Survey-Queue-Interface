@@ -142,7 +142,7 @@ $surveyQueueSettings = redcap_api($apiurl, $params);
                                         id="cond-logic-<?php print $index;?>"
                                         name="rules[<?php print $index;?>][logic]" 
                                         class="x-form-field" 
-                                        style="line-height:12px;font-size:11px;width:100%;max-width:350px;height:32px;resize:auto;"
+                                        style="line-height:12px;font-size:11px;width:100%;max-width:350px;height:32px;resize:both;"
                                         ><?php print $setting["condition_logic"]; ?></textarea>
                                     <br>
                                     <span style="font-family:tahoma;font-size:10px;color:#888;">
