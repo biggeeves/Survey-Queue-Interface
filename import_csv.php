@@ -28,19 +28,19 @@ if (isset($_FILES["import_file"]))
 
     if ($filesize == 0)
     {
-        array_push($errors, "ERROR: You must select a file to upload!");
+        array_push($errors, "[ERROR] You must select a file to upload!");
     }
     else
     {
         if ($ext !== "csv")
         {
-            array_push($errors, "ERROR: You can only upload CSV files!"); 
+            array_push($errors, "[ERROR] You can only upload CSV files!"); 
         }
         else
         {
             if (move_uploaded_file($filetmp, "{$temp}{$filename}") === FALSE)
             {
-                array_push($errors, "ERROR: Error moving file from temporary directory");
+                array_push($errors, "[ERROR] [ERROR] moving file from temporary directory");
             }
             else
             {
@@ -82,19 +82,28 @@ if (isset($_FILES["import_file"]))
                                         $row[$index] = trim($value);
                                     }
                                 }
-                                array_push($form_data, array_combine($headers, $row));
+                                
+                                $arr = array_combine($headers, $row);
+                                if ($arr === FALSE)
+                                {
+                                    array_push($errors, "[ERROR] Number of fields in row $rownum didn't match number of headers");
+                                }
+                                else
+                                {
+                                    array_push($form_data, array_combine($headers, $row));
+                                }
                             }
                             $rownum++;
                         }
 
                         if (fclose($file) === FALSE)
                         {
-                            array_push($errors, "Error closing import file");
+                            array_push($errors, "[ERROR] Unable to close import file");
                         }
 
                         if (unlink("{$temp}{$filename}") === FALSE)
                         {
-                            array_push($errors, "Error deleting import file");
+                            array_push($errors, "[ERROR] Unable to delete import file");
                         }
 
                         $Proj = new Project($pid);
@@ -102,7 +111,7 @@ if (isset($_FILES["import_file"]))
                         $to_import = array();
                         $csvErrors = array();
 
-                        $events = REDCap::getEventNames();
+                        $events = REDCap::getEventNames(true, true);
                         $instruments = REDCap::getInstrumentNames();
 
                         foreach($form_data as $index => $rule)
@@ -110,21 +119,21 @@ if (isset($_FILES["import_file"]))
                             /*
                             * Fields Needed:
                             * 
+                            * project_id
                             * survey_form
-                            * survey_id
                             * event_name
-                            * event_id
                             * arm_name
                             * active
                             * auto_start
                             * conditional_event_name
                             * contidional_arm_name
                             * conditional_survey_form
-                            * condition_surveycomplete_survey_id
                             * condition_andor
                             * condition_logic
                             * 
                             */
+                            $rownum = empty($_POST["has_headers"]) ? $index+1 : $index+2;
+
                             $survey_form = null;
                             $event_name = null;
                             $arm_name = null;
@@ -160,35 +169,48 @@ if (isset($_FILES["import_file"]))
                                 $and_or = empty($rule["condition_andor"]) || (strtolower($rule["condition_andor"]) !== "and" && strtolower($rule["condition_andor"]) !== "or") ? "AND" : strtoupper($rule["condition_andor"]);
 
                                 $auto_start = empty($rule["auto_start"]) || ($rule["auto_start"] !== "0" && $rule["auto_start"] !== "1") ? "0" : $rule["auto_start"];
-
+                                
                                 if (empty($event_name))
                                 {
-                                    $rownum = empty($_POST["has_headers"]) ? $index : $index+1;
-                                    array_push($csvErrors, "Error: row $rownum is missing its event name");
+                                    array_push($csvErrors, "[ROW] $rownum [ERROR] event name is missing");
                                 }
-                                else if (!in_array($event_name, $events))
+                                else 
                                 {
-                                    array_push($csvErrors, "Error: $event_name does not exist in project events");
+                                    $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_name));
+                                    if (!in_array($eventAndArm, $events))
+                                    {
+                                        array_push(
+                                            $csvErrors, 
+                                            "[ROW] $rownum [ERROR] $event_name does not exist in $arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                        );
+                                    }
                                 }
 
                                 if (empty($survey_form))
                                 {
                                     $rownum = empty($_POST["has_headers"]) ? $index : $index+1;
-                                    array_push($csvErrors, "Error: row $rownum is missing its instrument name");
+                                    array_push($csvErrors, "[ROW] $rownum [ERROR] row $rownum is missing its instrument name");
                                 }
                                 else if (!in_array($survey_form, array_keys($instruments)))
                                 {
-                                    array_push($csvErrors, "Error: $survey_form does not exist in project instruments");
+                                    array_push($csvErrors, "[ROW] $rownum [ERROR] $survey_form does not exist in project instruments");
                                 }
 
-                                if (!empty($conditional_event_name) && !in_array($conditional_event_name, $events))
+                                if (!empty($conditional_event_name))
                                 {
-                                    array_push($csvErrors, "Error: $conditional_event_name does not exist in project events");
+                                    $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_name));
+                                    if (!in_array($condEventAndArm, $events))
+                                    {
+                                        array_push(
+                                            $csvErrors, 
+                                            "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                        );
+                                    }
                                 }
 
                                 if (!empty($conditional_survey_form) && !in_array($conditional_survey_form, array_keys($instruments)))
                                 {
-                                    array_push($csvErrors, "Error: $conditional_survey_form does not exist in project instruments");
+                                    array_push($csvErrors, "[ROW] $rownum [ERROR] $conditional_survey_form does not exist in project instruments");
                                 }
                             }
                             
@@ -209,28 +231,29 @@ if (isset($_FILES["import_file"]))
                                 array_push($to_import, $param);
                             }
                         }
+                        $errors = array_merge($errors, $csvErrors);
 
-                        if (empty($csvErrors) && !empty($to_import))
+                        if (empty($errors) && !empty($to_import))
                         {
                             $result = import_survey_queue($to_import, $pid);
                             if (empty($result))
                             {
-                                array_push($errors, "Error importing survey queue to project.");
+                                array_push($errors, "[ERROR] Couldn't import survey queue to project.");
                             }
                             else
                             {
+                                foreach ($result as $rowid)
+                                {
+                                    REDCap::logEvent(strtolower(USERID) . " inserted settings into redcap_surveys_queue where sq_id = $rowid");
+                                }
                                 header("Location: index.php?pid=$pid&imported=1");
                                 exit;
                             }
                         }
-                        else
-                        {
-                            $errors = array_merge($errors, $csvErrors);
-                        }
                     }
                     else
                     {
-                        array_push($errors, "Error opening $filename to import.");
+                        array_push($errors, "[ERROR] Couldn't open $filename to import.");
                     }
                 }
             }

@@ -95,7 +95,6 @@ function import_survey_queue($data_array,$project_id)
         
             $q = db_query($sql);
             $result[] = db_insert_id();
-            REDCap::logEvent(strtolower(USERID) . " inserted row ID $survey_id into redcap_surveys_queue");
         }
         
         // Custom Survey Queue Settings

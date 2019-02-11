@@ -18,7 +18,7 @@ require_once APP_PATH_DOCROOT . "ProjectGeneral/header.php";
             <br/>
         <?php endif; ?>
         <?php if ($Proj->project['surveys_enabled']): ?>
-            <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project</strong></p>
+            <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project.</strong></p>
             <form method="post" action="import_csv.php?pid=<?php print $pid;?>" enctype="multipart/form-data" style="border: 1px solid black; padding: 10px">
                 <p>Selct CSV to upload:</p>
                 <input type="file" name="import_file">
@@ -40,4 +40,5 @@ require_once APP_PATH_DOCROOT . "ProjectGeneral/header.php";
 </body>
 </html>
 <?
+
 require_once APP_PATH_DOCROOT . "ProjectGeneral/footer.php";
