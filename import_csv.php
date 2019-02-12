@@ -40,7 +40,7 @@ if (isset($_FILES["import_file"]))
         {
             if (move_uploaded_file($filetmp, "{$temp}{$filename}") === FALSE)
             {
-                array_push($errors, "[ERROR] [ERROR] moving file from temporary directory");
+                array_push($errors, "[ERROR] Unable to move file from temporary directory");
             }
             else
             {
@@ -111,7 +111,7 @@ if (isset($_FILES["import_file"]))
                         $to_import = array();
                         $csvErrors = array();
 
-                        $events = REDCap::getEventNames(true, true);
+                        $events = REDCap::getEventNames(true, true); // will return false if project isn't longitudinal
                         $instruments = REDCap::getInstrumentNames();
 
                         foreach($form_data as $index => $rule)
@@ -119,7 +119,6 @@ if (isset($_FILES["import_file"]))
                             /*
                             * Fields Needed:
                             * 
-                            * project_id
                             * survey_form
                             * event_name
                             * arm_name
@@ -135,14 +134,14 @@ if (isset($_FILES["import_file"]))
                             $rownum = empty($_POST["has_headers"]) ? $index+1 : $index+2;
 
                             $survey_form = null;
-                            $event_name = null;
-                            $arm_name = null;
+                            $event_name = "Event 1";
+                            $arm_name = "Arm 1";
 
                             $cond_survey = null;
                             $conditional_survey_form = null;
                             $conditional_survey_id = null;
-                            $conditional_event_name = null;
-                            $conditional_arm_name = null;
+                            $conditional_event_name = "Event 1";
+                            $conditional_arm_name = "Arm 1";
                             $condition_logic = null;
 
                             $and_or = null;
@@ -154,41 +153,16 @@ if (isset($_FILES["import_file"]))
                             {
                                 $survey_form = $rule["survey_form"];
 
-                                $event_name = $rule["event_name"];
-
-                                $arm_name = empty($rule["arm_name"]) ? "Arm 1" : $rule["arm_name"];
-
                                 $conditional_survey_form = $rule["conditional_survey_form"];
-
-                                $conditional_event_name = $rule["conditional_event_name"];
-                                
-                                $conditional_arm_name = empty($rule["conditional_arm_name"]) ? "Arm 1" : $rule["conditional_arm_name"];
 
                                 $condition_logic = $rule["condition_logic"];
 
                                 $and_or = empty($rule["condition_andor"]) || (strtolower($rule["condition_andor"]) !== "and" && strtolower($rule["condition_andor"]) !== "or") ? "AND" : strtoupper($rule["condition_andor"]);
 
                                 $auto_start = empty($rule["auto_start"]) || ($rule["auto_start"] !== "0" && $rule["auto_start"] !== "1") ? "0" : $rule["auto_start"];
-                                
-                                if (empty($event_name))
-                                {
-                                    array_push($csvErrors, "[ROW] $rownum [ERROR] event name is missing");
-                                }
-                                else 
-                                {
-                                    $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_name));
-                                    if (!in_array($eventAndArm, $events))
-                                    {
-                                        array_push(
-                                            $csvErrors, 
-                                            "[ROW] $rownum [ERROR] $event_name does not exist in $arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
-                                        );
-                                    }
-                                }
 
                                 if (empty($survey_form))
                                 {
-                                    $rownum = empty($_POST["has_headers"]) ? $index : $index+1;
                                     array_push($csvErrors, "[ROW] $rownum [ERROR] row $rownum is missing its instrument name");
                                 }
                                 else if (!in_array($survey_form, array_keys($instruments)))
@@ -196,21 +170,65 @@ if (isset($_FILES["import_file"]))
                                     array_push($csvErrors, "[ROW] $rownum [ERROR] $survey_form does not exist in project instruments");
                                 }
 
-                                if (!empty($conditional_event_name))
-                                {
-                                    $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_name));
-                                    if (!in_array($condEventAndArm, $events))
-                                    {
-                                        array_push(
-                                            $csvErrors, 
-                                            "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
-                                        );
-                                    }
-                                }
-
                                 if (!empty($conditional_survey_form) && !in_array($conditional_survey_form, array_keys($instruments)))
                                 {
                                     array_push($csvErrors, "[ROW] $rownum [ERROR] $conditional_survey_form does not exist in project instruments");
+                                }
+
+                                $logic_errors = check_logic_errors($condition_logic);
+                                if (!empty($logic_errors))
+                                {
+                                    foreach($logic_errors as $logic_error)
+                                    {
+                                        array_push($errors, "[ROW] $rownum [ERROR] conditional_logic - $logic_error");
+                                    }
+                                }
+                                else
+                                {
+                                    $logic_errors = check_logic_events_and_fields($condition_logic);
+                                    if (!empty($logic_errors))
+                                    {
+                                        foreach($logic_errors as $logic_error)
+                                        {
+                                            array_push($errors, "[ROW] $rownum [ERROR] conditional_logic - $logic_error");
+                                        }
+                                    }
+                                }
+
+                                if ($events !== FALSE)
+                                {
+                                    $event_name = $rule["event_name"];
+                                    $arm_name = empty($rule["arm_name"]) ? "Arm 1" : $rule["arm_name"];
+                                    $conditional_event_name = $rule["conditional_event_name"];
+                                    $conditional_arm_name = empty($rule["conditional_arm_name"]) ? "Arm 1" : $rule["conditional_arm_name"];
+
+                                    if (empty($event_name))
+                                    {
+                                        array_push($csvErrors, "[ROW] $rownum [ERROR] event name is missing");
+                                    }
+                                    else 
+                                    {
+                                        $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_name));
+                                        if (!in_array($eventAndArm, $events))
+                                        {
+                                            array_push(
+                                                $csvErrors, 
+                                                "[ROW] $rownum [ERROR] $event_name does not exist in $arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                            );
+                                        }
+                                    }
+
+                                    if (!empty($conditional_event_name))
+                                    {
+                                        $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_name));
+                                        if (!in_array($condEventAndArm, $events))
+                                        {
+                                            array_push(
+                                                $csvErrors, 
+                                                "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                            );
+                                        }
+                                    }
                                 }
                             }
                             
