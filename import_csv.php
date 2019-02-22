@@ -7,7 +7,16 @@ require_once "functions.php";
 if (!SUPER_USER)
 {
     require_once APP_PATH_DOCROOT . "ProjectGeneral/header.php";
-    print "<div class='red' style='margin:20px 0;'>Only super admins have access to this plugin</div?";
+    print "<div class='red' style='margin:20px 0;'>Only super admins have access to this plugin</div>";
+    require_once APP_PATH_DOCROOT . "ProjectGeneral/footer.php";
+    exit;
+}
+
+$temp = $GLOBALS["temp_folder"];
+if (empty($temp))
+{
+    require_once APP_PATH_DOCROOT . "ProjectGeneral/header.php";
+    print "<div class='red' style='margin:20px 0;'>config.php requires 'temp_folder' to be set in \$GLOBALS. You've either not done so, or forgot to create a config.php file.</div>";
     require_once APP_PATH_DOCROOT . "ProjectGeneral/footer.php";
     exit;
 }
@@ -19,7 +28,7 @@ if (isset($_FILES["import_file"]))
 {
     $errors = array();
 
-    $folder = $GLOBALS["temp_folder"];
+    $temp = $GLOBALS["temp_folder"];
 
     $filename = $_FILES["import_file"]["name"];
     $filesize = $_FILES["import_file"]["size"];
