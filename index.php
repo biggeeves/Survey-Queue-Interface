@@ -20,7 +20,7 @@ require_once APP_PATH_DOCROOT . "ProjectGeneral/header.php";
         <?php if ($Proj->project['surveys_enabled']): ?>
             <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project.</strong></p>
             <form method="post" action="import_csv.php?pid=<?php print $pid;?>" enctype="multipart/form-data" style="border: 1px solid black; padding: 10px">
-                <p>Selct CSV to upload:</p>
+                <p>Select CSV to upload:</p>
                 <input type="file" name="import_file">
                 <p><input type="checkbox" name="has_headers"> The first row contains headers?</p>
                 <button type="submit">Import CSV</button>
