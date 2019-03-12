@@ -6,19 +6,15 @@ function export_survey_queue($project_id)
     if (isset($project_id) && $project_id!=='') 
     {
         $sql = "SELECT 
-			        sq.survey_id,
 					rs.form_name as survey_form,
-					sq.event_id,
 					em.descrip as event_name,
 					ea.arm_name as arm_name,
 					ea.arm_num  as arm_num,
 					sq.active,
 					sq.auto_start,
-					sq.condition_surveycomplete_event_id,
 					em1.descrip as conditional_event_name,
 					ea1.arm_name as conditional_arm_name,
 					ea1.arm_num as conditional_arm_num,
-					sq.condition_surveycomplete_survey_id,
 					rs2.form_name as conditional_survey_form,
 					sq.condition_andor,
 					sq.condition_logic
@@ -38,13 +34,6 @@ function export_survey_queue($project_id)
         {
 			$details[] = $r;
 		}
-			
-		$sql = "select survey_queue_custom_text from redcap_projects where project_id = $project_id";
-		$result = db_query($sql);  
-        while($r2 = db_fetch_assoc($result))
-        {	
-			$details[] = $r2;
-		}	
     }
     return $details;
 }
@@ -81,7 +70,6 @@ function import_survey_queue($data_array,$project_id)
         
         $andOr  =  $data_array[$i]["condition_andor"];  
         $conditionLogic       = $data_array[$i]["condition_logic"];
-        $survey_queue_custom_text  = $data_array[$i]["survey_queue_custom_text"];
         
         if(!empty($survey_id) OR !empty($survey_form))
         {
@@ -95,13 +83,6 @@ function import_survey_queue($data_array,$project_id)
         
             $q = db_query($sql);
             $result[] = db_insert_id();
-        }
-        
-        // Custom Survey Queue Settings
-        if(!empty($survey_queue_custom_text) || $survey_queue_custom_text != NULL || $survey_queue_custom_text != " ")
-        {	  
-            $sql = "update redcap_projects set survey_queue_custom_text = ".checkNull($survey_queue_custom_text)." where project_id = $project_id";
-            $q = db_query($sql);
         }
 	} 	
 	return $result;

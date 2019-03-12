@@ -36,20 +36,16 @@ else
     {
         $separator = ",";
         $headers = array (
-            "survey_id",
             "survey_form",
-            "event_id",
             "event_name",
             "arm_name",
             "active",
             "auto_start",
-            "condition_surveycomplete_event_id",
             "conditional_event_name",
             "conditional_arm_name",
-            "condition_surveycomplete_survey_id",
             "conditional_survey_form",
             "condition_andor",
-            "condition_logic"
+            "condition_logic",
         );
 
         // Write headers to file
@@ -62,26 +58,23 @@ else
             // Loop through each setting and write it to CSV file
             foreach($surveyQueueSettings as $index => $setting)
             {
-                if (!array_key_exists("survey_queue_custom_text", $setting))
+                $row = array();
+                foreach($headers as $header)
                 {
-                    $row = array();
-                    foreach($headers as $header)
+                    $headerValue = $setting[$header];
+                    if (is_null($headerValue))
                     {
-                        $headerValue = $setting[$header];
-                        if (is_null($headerValue))
-                        {
-                            array_push($row, "NULL");
-                        }
-                        else
-                        {
-                            array_push($row, $headerValue);
-                        }
+                        array_push($row, "NULL");
                     }
+                    else
+                    {
+                        array_push($row, $headerValue);
+                    }
+                }
 
-                    if (fputcsv($file, $row, $separator) === FALSE)
-                    {
-                        array_push($errors, "Error exporting row (" . implode(", ", $row). ")");
-                    }
+                if (fputcsv($file, $row, $separator) === FALSE)
+                {
+                    array_push($errors, "Error exporting row (" . implode(", ", $row). ")");
                 }
             }
 

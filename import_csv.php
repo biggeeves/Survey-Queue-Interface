@@ -57,17 +57,13 @@ if (isset($_FILES["import_file"]))
                 {
                     $form_data = array();
                     $headers = array (
-                        "survey_id",
                         "survey_form",
-                        "event_id",
                         "event_name",
                         "arm_name",
                         "active",
                         "auto_start",
-                        "condition_surveycomplete_event_id",
                         "conditional_event_name",
                         "conditional_arm_name",
-                        "condition_surveycomplete_survey_id",
                         "conditional_survey_form",
                         "condition_andor",
                         "condition_logic"
@@ -148,7 +144,6 @@ if (isset($_FILES["import_file"]))
 
                             $cond_survey = null;
                             $conditional_survey_form = null;
-                            $conditional_survey_id = null;
                             $conditional_event_name = "Event 1";
                             $conditional_arm_name = "Arm 1";
                             $condition_logic = null;
