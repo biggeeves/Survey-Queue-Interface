@@ -40,52 +40,59 @@ function export_survey_queue($project_id)
 
 function import_survey_queue($data_array,$project_id)
 {
-   $Proj = new Project($project_id);	
-   $result = array();
-   
-   // Delete old entries from table (if in table)
-   $sql = "delete from redcap_surveys_queue where survey_id IN (SELECT survey_id FROM redcap_surveys where project_id = $project_id)";
-   $q = db_query($sql);
-   
-   for($i=0; $i < count($data_array); $i++)
-   {
-        $survey_form  		 = $data_array[$i]["survey_form"];
-        $survey_id             = $Proj->forms[$survey_form]['survey_id'];
+    if (!empty($project_id))
+    {
+        $Proj = new Project($project_id);	
+        $result = array();
         
-        $event_name  			 = $data_array[$i]["event_name"];
-        $arm_name    			 = $data_array[$i]["arm_name"];
-        $unique_event_name     = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_name)); // Generate Event Name
-        $event_id 			 = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
-
-        $active      			 = $data_array[$i]["active"];
-        $autoStart   		     = $data_array[$i]["auto_start"];
+        // Delete old entries from table (if in table)
+        $sql = "delete from redcap_surveys_queue where survey_id IN (SELECT survey_id FROM redcap_surveys where project_id = $project_id)";
+        $q = db_query($sql);
         
-        $condition_event_name  = $data_array[$i]["conditional_event_name"];
-        $condition_event_arm   = $data_array[$i]["conditional_arm_name"];
-        $unique_event_name     = strtolower(str_replace(" ","_",$condition_event_name)."_".str_replace(" ","_",$condition_event_arm)); // Generate Event Name
-        $surveyCompEventId     =     $Proj->getEventIdUsingUniqueEventName($unique_event_name);
-        
-        $condition_survey_form = $data_array[$i]["conditional_survey_form"];
-        $surveyCompSurveyId    = $Proj->forms[$condition_survey_form]['survey_id'];
-        
-        $andOr  =  $data_array[$i]["condition_andor"];  
-        $conditionLogic       = $data_array[$i]["condition_logic"];
-        
-        if(!empty($survey_id) OR !empty($survey_form))
+        for($i=0; $i < count($data_array); $i++)
         {
-            $sql = "insert into redcap_surveys_queue (survey_id, event_id, active, condition_surveycomplete_survey_id, condition_surveycomplete_event_id,
-                            condition_andor, condition_logic, auto_start) values
-                            ('".db_escape($survey_id)."', '".db_escape($event_id)."', $active, ".checkNull($surveyCompSurveyId).", ".checkNull($surveyCompEventId).", '$andOr',
-                            ".checkNull($conditionLogic).", $autoStart)
-                            on duplicate key update active = $active, condition_surveycomplete_survey_id = ".checkNull($surveyCompSurveyId).",
-                            condition_surveycomplete_event_id = ".checkNull($surveyCompEventId).", condition_andor = '$andOr',
-                            condition_logic = ".checkNull($conditionLogic).", auto_start = $autoStart";
-        
-            $q = db_query($sql);
-            $result[] = db_insert_id();
-        }
-	} 	
-	return $result;
+                $survey_form  		 = $data_array[$i]["survey_form"];
+                $survey_id             = $Proj->forms[$survey_form]['survey_id'];
+                
+                $event_name  			 = $data_array[$i]["event_name"];
+                $arm_name    			 = $data_array[$i]["arm_name"];
+                $unique_event_name     = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_name)); // Generate Event Name
+                $event_id 			 = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
+
+                $active      			 = $data_array[$i]["active"];
+                $autoStart   		     = $data_array[$i]["auto_start"];
+                
+                $condition_event_name  = $data_array[$i]["conditional_event_name"];
+                $condition_event_arm   = $data_array[$i]["conditional_arm_name"];
+                $unique_event_name     = strtolower(str_replace(" ","_",$condition_event_name)."_".str_replace(" ","_",$condition_event_arm)); // Generate Event Name
+                $surveyCompEventId     =     $Proj->getEventIdUsingUniqueEventName($unique_event_name);
+                
+                $condition_survey_form = $data_array[$i]["conditional_survey_form"];
+                $surveyCompSurveyId    = $Proj->forms[$condition_survey_form]['survey_id'];
+                
+                $andOr  =  $data_array[$i]["condition_andor"];  
+                $conditionLogic       = $data_array[$i]["condition_logic"];
+                
+                if(!empty($survey_id) OR !empty($survey_form))
+                {
+                    $sql = "insert into redcap_surveys_queue (survey_id, event_id, active, condition_surveycomplete_survey_id, condition_surveycomplete_event_id,
+                                    condition_andor, condition_logic, auto_start) values
+                                    ('".db_escape($survey_id)."', '".db_escape($event_id)."', $active, ".checkNull($surveyCompSurveyId).", ".checkNull($surveyCompEventId).", '$andOr',
+                                    ".checkNull($conditionLogic).", $autoStart)
+                                    on duplicate key update active = $active, condition_surveycomplete_survey_id = ".checkNull($surveyCompSurveyId).",
+                                    condition_surveycomplete_event_id = ".checkNull($surveyCompEventId).", condition_andor = '$andOr',
+                                    condition_logic = ".checkNull($conditionLogic).", auto_start = $autoStart";
+                
+                    $q = db_query($sql);
+                    $result[] = db_insert_id();
+                }
+        } 	
+        return $result;
+    }
+    else
+    {
+        return array();
+    }
 }
 
 // PHP translated version of the JS function that's used in REDCap's survey queue interface
