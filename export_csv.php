@@ -38,11 +38,11 @@ else
         $headers = array (
             "survey_form",
             "event_name",
-            "arm_name",
+            "arm_num",
             "active",
             "auto_start",
             "conditional_event_name",
-            "conditional_arm_name",
+            "conditional_arm_num",
             "conditional_survey_form",
             "condition_andor",
             "condition_logic",
@@ -72,9 +72,12 @@ else
                     }
                 }
 
-                if (fputcsv($file, $row, $separator) === FALSE)
+                if (!empty($row))
                 {
-                    array_push($errors, "Error exporting row (" . implode(", ", $row). ")");
+                    if (fputcsv($file, $row, $separator) === FALSE)
+                    {
+                        array_push($errors, "Error exporting row (" . implode(", ", $row). ")");
+                    }
                 }
             }
 

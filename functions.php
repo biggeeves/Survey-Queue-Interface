@@ -55,16 +55,16 @@ function import_survey_queue($data_array,$project_id)
                 $survey_id             = $Proj->forms[$survey_form]['survey_id'];
                 
                 $event_name  			 = $data_array[$i]["event_name"];
-                $arm_name    			 = $data_array[$i]["arm_name"];
-                $unique_event_name     = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_name)); // Generate Event Name
+                $arm_num    			 = $data_array[$i]["arm_num"];
+                $unique_event_name     = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_num)); // Generate Event Name
                 $event_id 			 = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
 
                 $active      			 = $data_array[$i]["active"];
                 $autoStart   		     = $data_array[$i]["auto_start"];
                 
                 $condition_event_name  = $data_array[$i]["conditional_event_name"];
-                $condition_event_arm   = $data_array[$i]["conditional_arm_name"];
-                $unique_event_name     = strtolower(str_replace(" ","_",$condition_event_name)."_".str_replace(" ","_",$condition_event_arm)); // Generate Event Name
+                $condition_event_arm_num   = $data_array[$i]["conditional_arm_num"];
+                $unique_event_name     = strtolower(str_replace(" ","_",$condition_event_name)."_".str_replace(" ","_",$condition_event_arm_num)); // Generate Event Name
                 $surveyCompEventId     =     $Proj->getEventIdUsingUniqueEventName($unique_event_name);
                 
                 $condition_survey_form = $data_array[$i]["conditional_survey_form"];
@@ -93,6 +93,22 @@ function import_survey_queue($data_array,$project_id)
     {
         return array();
     }
+}
+
+function get_first_arm_num($project_id)
+{
+    $arm_num = '';
+    if (isset($project_id) && $project_id!=='') 
+    {
+        $sql = "SELECT arm_num from redcap_events_arms where project_id = $project_id order by arm_num ASC LIMIT 1;";
+                        
+        $result = db_query($sql);
+        while($r = db_fetch_assoc($result))
+        {
+			$arm_num = "Arm " . $r["arm_num"];
+		}
+    }
+    return $arm_num;
 }
 
 // PHP translated version of the JS function that's used in REDCap's survey queue interface

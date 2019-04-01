@@ -59,11 +59,11 @@ if (isset($_FILES["import_file"]))
                     $headers = array (
                         "survey_form",
                         "event_name",
-                        "arm_name",
+                        "arm_num",
                         "active",
                         "auto_start",
                         "conditional_event_name",
-                        "conditional_arm_name",
+                        "conditional_arm_num",
                         "conditional_survey_form",
                         "condition_andor",
                         "condition_logic"
@@ -201,10 +201,12 @@ if (isset($_FILES["import_file"]))
 
                                 if ($events !== FALSE)
                                 {
+                                    $first_arm = get_first_arm_num($pid);
+                                    var_dump($first_arm);
                                     $event_name = $rule["event_name"];
-                                    $arm_name = empty($rule["arm_name"]) ? "Arm 1" : $rule["arm_name"];
+                                    $arm_num = empty($rule["arm_num"]) ? $first_arm : "Arm " . $rule["arm_num"];
                                     $conditional_event_name = $rule["conditional_event_name"];
-                                    $conditional_arm_name = empty($rule["conditional_arm_name"]) ? "Arm 1" : $rule["conditional_arm_name"];
+                                    $conditional_arm_num = empty($rule["conditional_arm_num"]) ? $first_arm : "Arm " . $rule["conditional_arm_num"];
 
                                     if (empty($event_name))
                                     {
@@ -212,24 +214,24 @@ if (isset($_FILES["import_file"]))
                                     }
                                     else 
                                     {
-                                        $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_name));
+                                        $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_num));
                                         if (!in_array($eventAndArm, $events))
-                                        {
+                                        {   
                                             array_push(
                                                 $csvErrors, 
-                                                "[ROW] $rownum [ERROR] $event_name does not exist in $arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                                "[ROW] $rownum [ERROR] $event_name does not exist in $arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct."
                                             );
                                         }
                                     }
 
                                     if (!empty($conditional_event_name))
                                     {
-                                        $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_name));
+                                        $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_num));
                                         if (!in_array($condEventAndArm, $events))
                                         {
                                             array_push(
                                                 $csvErrors, 
-                                                "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_name (if the arm wasn't specified it will default to 'Arm 1'). Please check that both are correct."
+                                                "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct."
                                             );
                                         }
                                     }
@@ -241,11 +243,11 @@ if (isset($_FILES["import_file"]))
                                 $param = array(
                                     "survey_form" => $survey_form,
                                     "event_name" => $event_name,
-                                    "arm_name" => $arm_name,
+                                    "arm_num" => $arm_num,
                                     "active" => $active,
                                     "auto_start" => $auto_start,
                                     "conditional_event_name" => $conditional_event_name,
-                                    "conditional_arm_name" => $conditional_arm_name,
+                                    "conditional_arm_num" => $conditional_arm_num,
                                     "conditional_survey_form" => $conditional_survey_form,
                                     "condition_andor" => $and_or,
                                     "condition_logic" => trim($condition_logic)
