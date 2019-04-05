@@ -4,8 +4,6 @@ namespace BCCHR\SurveyQueueInterface;
 
 use Project;
 use REDCap;
-use finfo;
-use Survey;
 
 class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
 {    
@@ -104,7 +102,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
         $arm_num = '';
         $project_id = $this->getProjectId();
         $sql = "SELECT arm_num from redcap_events_arms where project_id = $project_id order by arm_num ASC LIMIT 1;";
-        $result = db_query($sql);
+        $result = $this->query($sql);
         while($r = db_fetch_assoc($result))
         {
             $arm_num = "Arm " . $r["arm_num"];
@@ -238,12 +236,6 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
     {
         $errors = array();
 
-        if (!SUPER_USER)
-        {
-            $errors[] = "Only super admins have access to this external module";
-            return $errors;
-        }
-
         $pid = $this->getProjectId();
         
         $surveyQueueSettings = $this->export_survey_queue();
@@ -330,12 +322,6 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
     {
         $errors = array();
 
-        if (!SUPER_USER)
-        {
-            $errors[] = "Only super admins have access to this external module";
-            return $errors;
-        }
-
         $pid = $this->getProjectId();
 
         // Move import file from temporary dir
@@ -363,135 +349,144 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             }
             else
             {
+                $allowed_mime_types = array("text/comma-separated-values", "text/csv", "application/csv", "application/excel", "application/vnd.ms-excel", "application/vnd.msexcel", "text/anytext", "text/plain");
                 $mime = mime_content_type($filetmp);
-                if ("text/plain" !== $mime && "text/x-csv" !== $mime)
+                if (!in_array($mime, $allowed_mime_types))
                 {
-                    $errors[] = "[ERROR] You can only upload CSV files!"; 
+                    $errors[] = "[ERROR] Type of file isn't allowed! You can only upload CSV files!"; 
                 }
-                else
+                else if (file_exists($filetmp))
                 {
-                    if (file_exists($filetmp))
+                    $form_data = array();
+                    $headers = array (
+                        "survey_form",
+                        "event_name",
+                        "arm_num",
+                        "active",
+                        "auto_start",
+                        "conditional_event_name",
+                        "conditional_arm_num",
+                        "conditional_survey_form",
+                        "condition_andor",
+                        "condition_logic"
+                    );
+                    $rownum = 1;
+                    $file = fopen($filetmp, "r");
+                    if ($file !== FALSE)
                     {
-                        $form_data = array();
-                        $headers = array (
-                            "survey_form",
-                            "event_name",
-                            "arm_num",
-                            "active",
-                            "auto_start",
-                            "conditional_event_name",
-                            "conditional_arm_num",
-                            "conditional_survey_form",
-                            "condition_andor",
-                            "condition_logic"
-                        );
-                        $rownum = 1;
-                        $file = fopen($filetmp, "r");
-                        if ($file !== FALSE)
+                        while (($row = fgetcsv($file, 1000, ",")) !== FALSE)
                         {
-                            while (($row = fgetcsv($file, 1000, ",")) !== FALSE)
+                            if (empty($_POST["has_headers"]) || $rownum != 1)
                             {
-                                if (empty($_POST["has_headers"]) || $rownum != 1)
+                                foreach ($row as $index => $value)
                                 {
-                                    foreach ($row as $index => $value)
+                                    if (strtoupper($value) == "NULL" || is_null($value))
                                     {
-                                        if (strtoupper($value) == "NULL" || is_null($value))
-                                        {
-                                            $row[$index] = null;
-                                        }
-                                        else
-                                        {
-                                            $row[$index] = trim($value);
-                                        }
-                                    }
-                                    
-                                    $arr = array_combine($headers, $row);
-                                    if ($arr === FALSE)
-                                    {
-                                        $errors[] = "[ERROR] Number of fields in row $rownum didn't match number of headers";
+                                        $row[$index] = null;
                                     }
                                     else
                                     {
-                                        $form_data[] = $arr;
+                                        $row[$index] = trim($value);
                                     }
                                 }
-                                $rownum++;
-                            }
-
-                            if (fclose($file) === FALSE)
-                            {
-                                $errors[] = "[ERROR] Unable to close import file";
-                            }
-
-                            $Proj = new Project($pid);
-
-                            $to_import = array();
-                            $csvErrors = array();
-
-                            $events = REDCap::getEventNames(true, true); // will return false if project isn't longitudinal
-                            $instruments = REDCap::getInstrumentNames();
-
-                            foreach($form_data as $index => $rule)
-                            {    
-                                /*
-                                * Fields Needed:
-                                * 
-                                * survey_form
-                                * event_name
-                                * arm_name
-                                * active
-                                * auto_start
-                                * conditional_event_name
-                                * contidional_arm_name
-                                * conditional_survey_form
-                                * condition_andor
-                                * condition_logic
-                                * 
-                                */
-                                $rownum = empty($_POST["has_headers"]) ? $index+1 : $index+2;
-
-                                $survey_form = null;
-                                $event_name = "Event 1";
-                                $arm_name = "Arm 1";
-
-                                $cond_survey = null;
-                                $conditional_survey_form = null;
-                                $conditional_event_name = "Event 1";
-                                $conditional_arm_name = "Arm 1";
-                                $condition_logic = null;
-
-                                $and_or = null;
-                                $auto_start = "0";
                                 
-                                $active = empty($rule["active"]) || ($rule["active"] !== "0" && $rule["active"] !== "1") ? "0" : $rule["active"];
-
-                                if ($active === "1")
+                                $arr = array_combine($headers, $row);
+                                if ($arr === FALSE)
                                 {
-                                    $survey_form = $rule["survey_form"];
+                                    $errors[] = "[ERROR] Number of fields in row $rownum didn't match number of headers";
+                                }
+                                else
+                                {
+                                    $form_data[] = $arr;
+                                }
+                            }
+                            $rownum++;
+                        }
 
-                                    $conditional_survey_form = $rule["conditional_survey_form"];
+                        if (fclose($file) === FALSE)
+                        {
+                            $errors[] = "[ERROR] Unable to close import file";
+                        }
 
-                                    $condition_logic = $rule["condition_logic"];
+                        $Proj = new Project($pid);
 
-                                    $and_or = empty($rule["condition_andor"]) || (strtolower($rule["condition_andor"]) !== "and" && strtolower($rule["condition_andor"]) !== "or") ? "AND" : strtoupper($rule["condition_andor"]);
+                        $to_import = array();
+                        $csvErrors = array();
 
-                                    $auto_start = empty($rule["auto_start"]) || ($rule["auto_start"] !== "0" && $rule["auto_start"] !== "1") ? "0" : $rule["auto_start"];
+                        $events = REDCap::getEventNames(true, true); // will return false if project isn't longitudinal
+                        $instruments = REDCap::getInstrumentNames();
 
-                                    if (empty($survey_form))
+                        foreach($form_data as $index => $rule)
+                        {    
+                            /*
+                            * Fields Needed:
+                            * 
+                            * survey_form
+                            * event_name
+                            * arm_name
+                            * active
+                            * auto_start
+                            * conditional_event_name
+                            * contidional_arm_name
+                            * conditional_survey_form
+                            * condition_andor
+                            * condition_logic
+                            * 
+                            */
+                            $rownum = empty($_POST["has_headers"]) ? $index+1 : $index+2;
+
+                            $survey_form = null;
+                            $event_name = "Event 1";
+                            $arm_name = "Arm 1";
+
+                            $cond_survey = null;
+                            $conditional_survey_form = null;
+                            $conditional_event_name = "Event 1";
+                            $conditional_arm_name = "Arm 1";
+                            $condition_logic = null;
+
+                            $and_or = null;
+                            $auto_start = "0";
+                            
+                            $active = empty($rule["active"]) || ($rule["active"] !== "0" && $rule["active"] !== "1") ? "0" : $rule["active"];
+
+                            if ($active === "1")
+                            {
+                                $survey_form = $rule["survey_form"];
+
+                                $conditional_survey_form = $rule["conditional_survey_form"];
+
+                                $condition_logic = $rule["condition_logic"];
+
+                                $and_or = empty($rule["condition_andor"]) || (strtolower($rule["condition_andor"]) !== "and" && strtolower($rule["condition_andor"]) !== "or") ? "AND" : strtoupper($rule["condition_andor"]);
+
+                                $auto_start = empty($rule["auto_start"]) || ($rule["auto_start"] !== "0" && $rule["auto_start"] !== "1") ? "0" : $rule["auto_start"];
+
+                                if (empty($survey_form))
+                                {
+                                    $csvErrors[] = "[ROW] $rownum [ERROR] row $rownum is missing its instrument name";
+                                }
+                                else if (!in_array($survey_form, array_keys($instruments)))
+                                {
+                                    $csvErrors[] = "[ROW] $rownum [ERROR] $survey_form does not exist in project instruments";
+                                }
+
+                                if (!empty($conditional_survey_form) && !in_array($conditional_survey_form, array_keys($instruments)))
+                                {
+                                    $csvErrors[] = "[ROW] $rownum [ERROR] $conditional_survey_form does not exist in project instruments";
+                                }
+
+                                $logic_errors = $this->check_logic_errors($condition_logic);
+                                if (!empty($logic_errors))
+                                {
+                                    foreach($logic_errors as $logic_error)
                                     {
-                                        $csvErrors[] = "[ROW] $rownum [ERROR] row $rownum is missing its instrument name";
+                                        $errors[] = "[ROW] $rownum [ERROR] conditional_logic - $logic_error";
                                     }
-                                    else if (!in_array($survey_form, array_keys($instruments)))
-                                    {
-                                        $csvErrors[] = "[ROW] $rownum [ERROR] $survey_form does not exist in project instruments";
-                                    }
-
-                                    if (!empty($conditional_survey_form) && !in_array($conditional_survey_form, array_keys($instruments)))
-                                    {
-                                        $csvErrors[] = "[ROW] $rownum [ERROR] $conditional_survey_form does not exist in project instruments";
-                                    }
-
-                                    $logic_errors = $this->check_logic_errors($condition_logic);
+                                }
+                                else
+                                {
+                                    $logic_errors = $this->check_logic_events_and_fields($condition_logic);
                                     if (!empty($logic_errors))
                                     {
                                         foreach($logic_errors as $logic_error)
@@ -499,89 +494,78 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                                             $errors[] = "[ROW] $rownum [ERROR] conditional_logic - $logic_error";
                                         }
                                     }
-                                    else
-                                    {
-                                        $logic_errors = $this->check_logic_events_and_fields($condition_logic);
-                                        if (!empty($logic_errors))
-                                        {
-                                            foreach($logic_errors as $logic_error)
-                                            {
-                                                $errors[] = "[ROW] $rownum [ERROR] conditional_logic - $logic_error";
-                                            }
-                                        }
-                                    }
-
-                                    if ($events !== FALSE)
-                                    {
-                                        $first_arm = $this->get_first_arm_num();
-                                        $event_name = $rule["event_name"];
-                                        $arm_num = empty($rule["arm_num"]) ? $first_arm : "Arm " . $rule["arm_num"];
-                                        $conditional_event_name = $rule["conditional_event_name"];
-                                        $conditional_arm_num = empty($rule["conditional_arm_num"]) ? $first_arm : "Arm " . $rule["conditional_arm_num"];
-
-                                        if (empty($event_name))
-                                        {
-                                            $csvErrors[] = "[ROW] $rownum [ERROR] event name is missing";
-                                        }
-                                        else 
-                                        {
-                                            $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_num));
-                                            if (!in_array($eventAndArm, $events))
-                                            {   
-                                                $csvErrors[] = "[ROW] $rownum [ERROR] $event_name does not exist in $arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
-                                            }
-                                        }
-
-                                        if (!empty($conditional_event_name))
-                                        {
-                                            $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_num));
-                                            if (!in_array($condEventAndArm, $events))
-                                            {
-                                                $csvErrors[] = "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
-                                            }
-                                        }
-                                    }
                                 }
-                                
-                                if (empty($csvErrors))
+
+                                if ($events !== FALSE)
                                 {
-                                    $param = array(
-                                        "survey_form" => $survey_form,
-                                        "event_name" => $event_name,
-                                        "arm_num" => $arm_num,
-                                        "active" => $active,
-                                        "auto_start" => $auto_start,
-                                        "conditional_event_name" => $conditional_event_name,
-                                        "conditional_arm_num" => $conditional_arm_num,
-                                        "conditional_survey_form" => $conditional_survey_form,
-                                        "condition_andor" => $and_or,
-                                        "condition_logic" => trim($condition_logic)
-                                    );
-                                    $to_import[] = $param;
+                                    $first_arm = $this->get_first_arm_num();
+                                    $event_name = $rule["event_name"];
+                                    $arm_num = empty($rule["arm_num"]) ? $first_arm : "Arm " . $rule["arm_num"];
+                                    $conditional_event_name = $rule["conditional_event_name"];
+                                    $conditional_arm_num = empty($rule["conditional_arm_num"]) ? $first_arm : "Arm " . $rule["conditional_arm_num"];
+
+                                    if (empty($event_name))
+                                    {
+                                        $csvErrors[] = "[ROW] $rownum [ERROR] event name is missing";
+                                    }
+                                    else 
+                                    {
+                                        $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_num));
+                                        if (!in_array($eventAndArm, $events))
+                                        {   
+                                            $csvErrors[] = "[ROW] $rownum [ERROR] $event_name does not exist in $arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
+                                        }
+                                    }
+
+                                    if (!empty($conditional_event_name))
+                                    {
+                                        $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_num));
+                                        if (!in_array($condEventAndArm, $events))
+                                        {
+                                            $csvErrors[] = "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
+                                        }
+                                    }
                                 }
                             }
-                            $errors = array_merge($errors, $csvErrors);
-
-                            if (empty($errors) && !empty($to_import))
+                            
+                            if (empty($csvErrors))
                             {
-                                $result = $this->import_survey_queue($to_import);
-                                if (empty($result))
+                                $param = array(
+                                    "survey_form" => $survey_form,
+                                    "event_name" => $event_name,
+                                    "arm_num" => $arm_num,
+                                    "active" => $active,
+                                    "auto_start" => $auto_start,
+                                    "conditional_event_name" => $conditional_event_name,
+                                    "conditional_arm_num" => $conditional_arm_num,
+                                    "conditional_survey_form" => $conditional_survey_form,
+                                    "condition_andor" => $and_or,
+                                    "condition_logic" => trim($condition_logic)
+                                );
+                                $to_import[] = $param;
+                            }
+                        }
+                        $errors = array_merge($errors, $csvErrors);
+
+                        if (empty($errors) && !empty($to_import))
+                        {
+                            $result = $this->import_survey_queue($to_import);
+                            if (empty($result))
+                            {
+                                $errors[] = "[ERROR] Couldn't import survey queue to project.";
+                            }
+                            else
+                            { 
+                                foreach($result as $rowid)
                                 {
-                                    $errors[] = "[ERROR] Couldn't import survey queue to project.";
-                                }
-                                else
-                                { 
-                                    foreach($result as $rowid)
-                                    {
-                                        REDCap::logEvent(strtolower(USERID) . " inserted settings into redcap_surveys_queue where sq_id = $rowid");
-                                    }
+                                    REDCap::logEvent(strtolower(USERID) . " inserted settings into redcap_surveys_queue where sq_id = $rowid");
                                 }
                             }
                         }
-                        else
-                        {
-                            $errors[] = "[ERROR] Couldn't open $filename to import.";
-                        }
+                    }
+                    else
+                    {
+                        $errors[] = "[ERROR] Couldn't open $filename to import.";
                     }
                 }
             }
@@ -598,40 +582,36 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
         <html>
         <body>
             <h4>Import/Export Survey Queue</h4>
-            <?php if (SUPER_USER): ?>
-                <?php if ($_GET["imported"] === "1"): ?>
-                    <div class="green">Survey Queue Imported</div>
-                    <br/>
+            <?php if ($_GET["imported"] === "1"): ?>
+                <div class="green">Survey Queue Imported</div>
+                <br/>
+            <?php endif; ?>
+            <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project.</strong></p>
+            <h5>Instructions</h4>
+            <p>The csv import requires <strong>all</strong> the following columns in the <strong>below order</strong>, the same columns the csv export will contain:</p>
+            <ul>
+                <li>survey_form - Unique name of survey in the queue</li>
+                <li>event_name - Name of survey's event</li>
+                <li>arm_num - Arm number the survey resides in</li>
+                <li>active - Is the form active in the queue? </li>
+                <li>auto_start - Used to take the participant immediately to the first incomplete survey in the queue if 'auto start' is enabled for that survey</li>
+                <li>conditional_event_name - conditional_survey_form event name</li>
+                <li>conditional_arm_num - conditional_survey_form arm number</li>
+                <li>conditional_survey_form - Display survey in the queue when this is complete</li>
+                <li>condition_andor - Display survey in queue when conditional_survey_form is complete <strong>and|or</strong> condition logic is true</li>
+                <li>condition_logic - Display survey when conditional logic is true</li>
+            </ul>
+            <form method="post" action=<?php print $this->getUrl("import_csv.php");?> enctype="multipart/form-data" style="border: 1px solid black; padding: 10px">
+                <?php if ($Proj->project['surveys_enabled']): ?>
+                    <p>Select CSV to upload:</p>
+                    <input type="file" name="import_file">
+                    <p><input type="checkbox" name="has_headers"> The first row contains headers?</p>
+                    <button type="submit">Import CSV</button>
+                    <button type="submit" formaction=<?php print $this->getUrl("export_csv.php");?>>Export CSV</button>
+                <?php else: ?>
+                    <p><i>You must enable surveys before using this external module</i></p>
                 <?php endif; ?>
-                <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project.</strong></p>
-                <h5>Instructions</h4>
-                <p>The csv import requires <strong>all</strong> the following columns in the <strong>below order</strong>, the same columns the csv export will contain:</p>
-                <ul>
-                    <li>survey_form - Unique name of survey in the queue</li>
-                    <li>event_name - Name of survey's event</li>
-                    <li>arm_num - Arm number the survey resides in</li>
-                    <li>active - Is the form active in the queue? </li>
-                    <li>auto_start - Used to take the participant immediately to the first incomplete survey in the queue if 'auto start' is enabled for that survey</li>
-                    <li>conditional_event_name - conditional_survey_form event name</li>
-                    <li>conditional_arm_num - conditional_survey_form arm number</li>
-                    <li>conditional_survey_form - Display survey in the queue when this is complete</li>
-                    <li>condition_andor - Display survey in queue when conditional_survey_form is complete <strong>and|or</strong> condition logic is true</li>
-                    <li>condition_logic - Display survey when conditional logic is true</li>
-                </ul>
-                <form method="post" action=<?php print $this->getUrl("import_csv.php");?> enctype="multipart/form-data" style="border: 1px solid black; padding: 10px">
-                    <?php if ($Proj->project['surveys_enabled']): ?>
-                        <p>Select CSV to upload:</p>
-                        <input type="file" name="import_file">
-                        <p><input type="checkbox" name="has_headers"> The first row contains headers?</p>
-                        <button type="submit">Import CSV</button>
-                        <button type="submit" formaction=<?php print $this->getUrl("export_csv.php");?>>Export CSV</button>
-                    <?php else: ?>
-                        <p><i>You must enable surveys before using this external module</i></p>
-                    <?php endif; ?>
-                </form>
-            <?php else: ?>
-                <div class="red">Only super admins have access to this external module</div>
-            <?php endif;?>
+            </form>
         </body>
         </html>
         <?php
