@@ -64,6 +64,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             $event_name = $data_array[$i]["event_name"];
             $arm_num = $data_array[$i]["arm_num"];
             $unique_event_name = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_num)); // Generate Event Name
+
             $event_id = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
 
             $active = $data_array[$i]["active"];
@@ -437,12 +438,12 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
 
                             $survey_form = null;
                             $event_name = "Event 1";
-                            $arm_name = "Arm 1";
+                            $arm_num = "Arm 1";
 
                             $cond_survey = null;
                             $conditional_survey_form = null;
                             $conditional_event_name = "Event 1";
-                            $conditional_arm_name = "Arm 1";
+                            $conditional_arm_num = "Arm 1";
                             $condition_logic = null;
 
                             $and_or = null;
