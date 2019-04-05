@@ -202,7 +202,6 @@ if (isset($_FILES["import_file"]))
                                 if ($events !== FALSE)
                                 {
                                     $first_arm = get_first_arm_num($pid);
-                                    var_dump($first_arm);
                                     $event_name = $rule["event_name"];
                                     $arm_num = empty($rule["arm_num"]) ? $first_arm : "Arm " . $rule["arm_num"];
                                     $conditional_event_name = $rule["conditional_event_name"];
