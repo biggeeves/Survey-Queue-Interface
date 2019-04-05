@@ -140,12 +140,12 @@ if (isset($_FILES["import_file"]))
 
                             $survey_form = null;
                             $event_name = "Event 1";
-                            $arm_name = "Arm 1";
+                            $arm_num = "Arm 1";
 
                             $cond_survey = null;
                             $conditional_survey_form = null;
                             $conditional_event_name = "Event 1";
-                            $conditional_arm_name = "Arm 1";
+                            $conditional_arm_num = "Arm 1";
                             $condition_logic = null;
 
                             $and_or = null;
