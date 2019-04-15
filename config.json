@@ -1,0 +1,22 @@
+{
+    "name": "Survey Queue Interface",
+    "namespace": "BCCHR\\SurveyQueueInterface",
+    "description": "Provides an interface that allows exporting and importing the survey queue as a CSV file.",
+    "authors": [
+        {
+            "name": "Ashley Lee",
+            "email": "alee2@bcchr.ca",
+            "institution": "BC Children's Hospital Research Institute"
+        }
+    ],
+    "links": {
+        "project": [
+            {
+                "name": "Survey Queue Interface",
+                "url": "index.php",
+                "icon": "link",
+                "show-header-and-footer": true
+            }
+        ]
+    }
+}
