@@ -587,7 +587,13 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                 <div class="green">Survey Queue Imported</div>
                 <br/>
             <?php endif; ?>
-            <p><strong><span style="color:red">**IMPORTANT**</span> Make sure your survey queue settings correspond to the correct project.</strong></p>
+            <p>
+                <strong>
+                    <span style="color:red">**IMPORTANT**</span> 
+                    Make sure your survey queue settings correspond to the correct project. While the external module will check that events, arms, and forms exist within the project,
+                    two projects with the same structure will pass validation for each other.
+                </strong>
+            </p>
             <h5>Instructions</h4>
             <p>The csv import requires <strong>all</strong> the following columns in the <strong>below order</strong>, the same columns the csv export will contain:</p>
             <ul>
