@@ -600,7 +600,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                 <li>survey_form - Unique name of survey in the queue</li>
                 <li>event_name - Name of survey's event</li>
                 <li>arm_num - Arm number the survey resides in</li>
-                <li>active - Is the form active in the queue? </li>
+                <li>active - Is the form active in the queue?</li>
                 <li>auto_start - Used to take the participant immediately to the first incomplete survey in the queue if 'auto start' is enabled for that survey</li>
                 <li>conditional_event_name - conditional_survey_form event name</li>
                 <li>conditional_arm_num - conditional_survey_form arm number</li>
