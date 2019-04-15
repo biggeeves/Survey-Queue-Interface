@@ -387,7 +387,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                                     }
                                     else
                                     {
-                                        $row[$index] = trim($value);
+                                        $row[$index] = REDCap::escapHtml(trim($value));
                                     }
                                 }
                                 
