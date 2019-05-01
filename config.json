@@ -14,8 +14,7 @@
             {
                 "name": "Survey Queue Interface",
                 "url": "index.php",
-                "icon": "link",
-                "show-header-and-footer": true
+                "icon": "link"
             }
         ]
     },
