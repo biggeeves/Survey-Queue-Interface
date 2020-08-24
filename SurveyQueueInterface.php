@@ -52,6 +52,9 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
         $project_id = $this->getProjectId();
         $Proj = new Project($project_id);	
         
+        $sql = "start transaction";
+        $this->query($sql);
+
         // Delete old entries from table (if in table)
         $sql = "delete from redcap_surveys_queue where survey_id IN (SELECT survey_id FROM redcap_surveys where project_id = $project_id)";
         $q = $this->query($sql);
@@ -94,8 +97,22 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                 $q = $this->query($sql);
                 $result[] = db_insert_id();
             }
-        } 	
-        return $result;
+        }
+
+        if (count($result) != count($data_array) || in_array(0, $result))
+        {
+            $sql = "rollback";
+            $success = false;
+        }
+        else
+        {
+            $sql = "commit";
+            $success = true;
+        }
+
+        $this->query($sql);
+
+        return $success;
     }
 
     private function get_first_arm_num()
@@ -180,6 +197,52 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
         return $errors;
     }
 
+    /**
+     * Transform a checkbox option from triple underscore  ___ to parenthesis () presentation.
+     * Code copied from the Go to Prod plugin at https://github.com/aandresalvarez/go_to_prod.
+     **/
+    private function TransformCheckBoxField($field___format)
+    {
+        // check if is a negative code for example var(-2)
+       if(strpos( trim($field___format),  "____" ) !== false){
+           $number = substr(trim($field___format), strpos($field___format, "____") + 4);
+           $underscore="____".$number;
+           $parenthesis="(-".$number.")";
+
+       }else {
+           $number = substr(trim($field___format), strpos($field___format, "___") + 3);
+           $underscore = "___" . $number;
+           $parenthesis = "(" . $number . ")";
+       }
+
+       $parenthesis_format = str_replace($underscore,$parenthesis, $field___format);
+
+       return $parenthesis_format;
+   }
+
+   /**
+    * Add extra Checkbox variables to the list of variables of the project.
+    * Code copied from the Go to Prod plugin at https://github.com/aandresalvarez/go_to_prod.
+    */
+   private function AddCheckBoxes($fields)
+   {
+       $var =Array();
+
+       foreach ($fields as $field_name){
+           if (REDCap::getFieldType($field_name) == 'checkbox') {
+               $checkbox_variable_array= REDCap::getExportFieldNames($field_name);
+                   foreach ($checkbox_variable_array[$field_name] as $checkbox___format){
+                       $checkbox_field= self::TransformCheckBoxField($checkbox___format);
+                       array_push( $var, $checkbox_field);
+
+                   }
+           } else {
+                       array_push( $var, $field_name);
+             }
+       }
+       return $var;
+   }
+
     private function check_logic_events_and_fields($logic)
     {
         $errors = array();
@@ -188,6 +251,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
         {
             $events = REDCap::getEventNames(true, true); // If there are no events (the project is classical), the method will return false
             $fields = REDCap::getFieldNames();
+            $fields = $this->AddCheckBoxes($fields); // Add checkbox field options
 
             // Get all occurences of an opening square bracket "["
             $lastPos = 0;
@@ -551,16 +615,13 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                         if (empty($errors) && !empty($to_import))
                         {
                             $result = $this->import_survey_queue($to_import);
-                            if (empty($result))
+                            if (!$result)
                             {
-                                $errors[] = "[ERROR] Couldn't import survey queue to project.";
+                                $errors[] = "[ERROR] Couldn't import survey queue to project. Transaction rolled back to last existing queue.";
                             }
                             else
-                            { 
-                                foreach($result as $rowid)
-                                {
-                                    REDCap::logEvent(strtolower(USERID) . " inserted settings into redcap_surveys_queue where sq_id = $rowid");
-                                }
+                            {
+                                REDCap::logEvent("Survey Queue Interface Import", "Survey Queue Interface EM has sucessfully updated the survey queue");
                             }
                         }
                     }
