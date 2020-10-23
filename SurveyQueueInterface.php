@@ -61,13 +61,12 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             
         for($i=0; $i < count($data_array); $i++)
         {
-            
             $survey_form = $data_array[$i]["survey_form"];
             $survey_id = $Proj->forms[$survey_form]["survey_id"];
                     
             $event_name = $data_array[$i]["event_name"];
             $arm_num = $data_array[$i]["arm_num"];
-            $unique_event_name = strtolower(str_replace(" ","_",$event_name)."_".str_replace(" ","_",$arm_num)); // Generate Event Name
+            $unique_event_name = strtolower(str_replace(array(" ", "-"), array("_", ""), $event_name)."_".str_replace(" ","_",$arm_num)); // Generate Event Name
 
             $event_id = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
 
@@ -76,7 +75,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                     
             $condition_event_name = $data_array[$i]["conditional_event_name"];
             $condition_event_arm_num = $data_array[$i]["conditional_arm_num"];
-            $unique_event_name = strtolower(str_replace(" ","_",$condition_event_name)."_".str_replace(" ","_",$condition_event_arm_num)); // Generate Event Name
+            $unique_event_name = strtolower(str_replace(array(" ", "-"), array("_", ""),$condition_event_name)."_".str_replace(" ","_",$condition_event_arm_num)); // Generate Event Name
             $surveyCompEventId = $Proj->getEventIdUsingUniqueEventName($unique_event_name);
                     
             $condition_survey_form = $data_array[$i]["conditional_survey_form"];
@@ -576,7 +575,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                                     }
                                     else 
                                     {
-                                        $eventAndArm = strtolower(str_replace(" ", "_", $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_num));
+                                        $eventAndArm = strtolower(str_replace(array(" ", "-"), array("_", ""), $event_name)) . "_" . strtolower(str_replace(" ", "_", $arm_num));
                                         if (!in_array($eventAndArm, $events))
                                         {   
                                             $csvErrors[] = "[ROW] $rownum [ERROR] $event_name does not exist in $arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
@@ -585,7 +584,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
 
                                     if (!empty($conditional_event_name))
                                     {
-                                        $condEventAndArm = strtolower(str_replace(" ", "_", $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_num));
+                                        $condEventAndArm = strtolower(str_replace(array(" ", "-"), array("_", ""), $conditional_event_name)) . "_" . strtolower(str_replace(" ", "_", $conditional_arm_num));
                                         if (!in_array($condEventAndArm, $events))
                                         {
                                             $csvErrors[] = "[ROW] $rownum [ERROR] $conditional_event_name does not exist in $conditional_arm_num (if the arm wasn't specified it will default to the first arm). Please check that both are correct.";
