@@ -61,6 +61,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             
         for($i=0; $i < count($data_array); $i++)
         {
+            
             $survey_form = $data_array[$i]["survey_form"];
             $survey_id = $Proj->forms[$survey_form]["survey_id"];
                     
@@ -84,7 +85,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             $andOr = $data_array[$i]["condition_andor"];  
             $conditionLogic = $data_array[$i]["condition_logic"];
                     
-            if(!empty($survey_id) OR !empty($survey_form))
+            if($survey_id !== '' && $survey_id !== null)
             {
                 $sql = "insert into redcap_surveys_queue (survey_id, event_id, active, condition_surveycomplete_survey_id, condition_surveycomplete_event_id,
                         condition_andor, condition_logic, auto_start) values
@@ -617,7 +618,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                             $result = $this->import_survey_queue($to_import);
                             if (!$result)
                             {
-                                $errors[] = "[ERROR] Couldn't import survey queue to project. Transaction rolled back to last existing queue.";
+                                $errors[] = "[ERROR] Couldn't import survey queue to project. Number of rows inserted didn't match those in survey import. Please make sure all surveys are enabled before importing. Transaction rolled back to last existing queue.";
                             }
                             else
                             {
