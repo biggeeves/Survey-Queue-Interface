@@ -253,7 +253,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
             $fields = REDCap::getFieldNames();
             $fields = $this->AddCheckBoxes($fields); // Add checkbox field options
 
-            // Get all occurences of an opening square bracket "["
+            // Get all occurrences of an opening square bracket "["
             $lastPos = 0;
             $openingBrackets = array();
             while (($lastPos = strpos($logic, "[", $lastPos)) !== FALSE)
@@ -492,7 +492,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                             * active
                             * auto_start
                             * conditional_event_name
-                            * contidional_arm_name
+                            * occurrencesconditional_arm_name
                             * conditional_survey_form
                             * condition_andor
                             * condition_logic
@@ -621,7 +621,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                             }
                             else
                             {
-                                REDCap::logEvent("Survey Queue Interface Import", "Survey Queue Interface EM has sucessfully updated the survey queue");
+                                REDCap::logEvent("Survey Queue Interface Import", "Survey Queue Interface EM has successfully updated the survey queue");
                             }
                         }
                     }
@@ -655,7 +655,7 @@ class SurveyQueueInterface extends \ExternalModules\AbstractExternalModule
                     two projects with the same structure will pass validation for each other.
                 </strong>
             </p>
-            <h5>Instructions</h4>
+            <h4>Instructions</h4>
             <p>The csv import requires <strong>all</strong> the following columns in the <strong>below order</strong>, the same columns the csv export will contain:</p>
             <ul>
                 <li>survey_form - Unique name of survey in the queue</li>
