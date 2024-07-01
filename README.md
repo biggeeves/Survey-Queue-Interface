@@ -18,4 +18,4 @@ The following columns are exported in a CSV file:
 
 ## Importing Survey Queue
 The import functionality expects a CSV file with the columns listed above, in the same order. The module will validate events, instruments, and 
-arms and return the approriate errors without any changes to the database. However, two projects with the same structure will pass validation for each other.
+arms and return the appropriate errors without any changes to the database. However, two projects with the same structure will pass validation for each other.
